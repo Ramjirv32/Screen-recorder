@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screen Recorder</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    video {
+      margin-top: 20px;
+      width: 80%;
+      max-width: 600px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Screen Recorder</h1>
+  <button id="start">Start Recording</button>
+  <button id="stop" disabled>Stop Recording</button>
+  <video id="preview" controls></video>
+
+  <script>
+    const startButton = document.getElementById('start');
+    const stopButton = document.getElementById('stop');
+    const videoPreview = document.getElementById('preview');
+
+    let mediaRecorder;
+    let recordedChunks = [];
+
+    startButton.addEventListener('click', async () => {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true
+        });
+        videoPreview.srcObject = stream;
+        videoPreview.play();
+
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: 'video/mp4' });
+          const url = URL.createObjectURL(blob);
+          videoPreview.srcObject = null;
+          videoPreview.src = url;
+
+        
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'recording.webm';
+          a.click();
+
+          recordedChunks = [];
+        };
+
+        mediaRecorder.start();
+        startButton.disabled = true;
+        stopButton.disabled = false;
+      } catch (err) {
+        console.error('Error starting screen recording:', err);
+      }
+    });
+
+    stopButton.addEventListener('click', () => {
+      mediaRecorder.stop();
+      startButton.disabled = false;
+      stopButton.disabled = true;
+
+      videoPreview.srcObject.getTracks().forEach((track) => track.stop());
+    });
+  </script>
+</body>
+</html>
